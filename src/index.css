@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0f766e;
+  --color-primary-light: #14b8a6;
+  --color-primary-dark: #0d5c56;
+  --color-secondary: #1e40af;
+  --color-secondary-light: #3b82f6;
+  --color-accent: #f59e0b;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8fafc;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: var(--font-sans);
+    background-color: #f1f5f9;
+    color: var(--color-text);
+    margin: 0;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark shadow-sm;
+  }
+  .btn-secondary {
+    @apply bg-white text-text border border-border hover:bg-surface-hover;
+  }
+  .btn-danger {
+    @apply bg-danger text-white hover:bg-red-700;
+  }
+  .btn-ghost {
+    @apply text-text-secondary hover:bg-surface-hover;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .card {
+    @apply bg-white rounded-xl border border-border shadow-sm;
+  }
+  .input {
+    @apply w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all;
+  }
+  .label {
+    @apply block text-sm font-medium text-text-secondary mb-1.5;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .badge-success {
+    @apply bg-green-50 text-green-700 ring-1 ring-green-600/20;
+  }
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700 ring-1 ring-amber-600/20;
+  }
+  .badge-danger {
+    @apply bg-red-50 text-red-700 ring-1 ring-red-600/20;
+  }
+  .badge-info {
+    @apply bg-blue-50 text-blue-700 ring-1 ring-blue-600/20;
+  }
+  .badge-neutral {
+    @apply bg-slate-100 text-slate-600 ring-1 ring-slate-500/20;
+  }
+}
