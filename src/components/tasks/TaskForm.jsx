@@ -14,6 +14,12 @@ const priorityOptions = [
   { value: 'urgent', label: 'Urgent' },
 ]
 
+const assigneeOptions = [
+  { value: 'Niva', label: 'Niva' },
+  { value: 'Richard', label: 'Richard' },
+  { value: 'Stephen', label: 'Stephen' },
+]
+
 export default function TaskForm({ task, onSubmit, onCancel, loading }) {
   const [form, setForm] = useState({
     title: '',
@@ -21,7 +27,7 @@ export default function TaskForm({ task, onSubmit, onCancel, loading }) {
     status: 'todo',
     priority: 'medium',
     due_date: '',
-    assigned_to: '',
+    assigned_to: 'Niva',
   })
 
   useEffect(() => {
@@ -32,7 +38,7 @@ export default function TaskForm({ task, onSubmit, onCancel, loading }) {
         status: task.status || 'todo',
         priority: task.priority || 'medium',
         due_date: task.due_date || '',
-        assigned_to: task.assigned_to || '',
+        assigned_to: task.assigned_to || 'Niva',
       })
     }
   }, [task])
@@ -108,13 +114,15 @@ export default function TaskForm({ task, onSubmit, onCancel, loading }) {
 
         <div>
           <label className="label">Assigned To</label>
-          <input
-            type="text"
+          <select
             value={form.assigned_to}
             onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
             className="input"
-            placeholder="Name or email"
-          />
+          >
+            {assigneeOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
