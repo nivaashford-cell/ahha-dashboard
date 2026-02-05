@@ -82,3 +82,12 @@
     @apply bg-slate-100 text-slate-600 ring-1 ring-slate-500/20;
   }
 }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}

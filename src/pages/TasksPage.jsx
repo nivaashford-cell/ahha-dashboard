@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { statusColors, priorityColors, formatDate, getDueDateLabel, getDueDateColor, truncate } from '@/lib/helpers'
 import Modal from '@/components/ui/Modal'
 import TaskForm from '@/components/tasks/TaskForm'
+import TaskDrawer from '@/components/tasks/TaskDrawer'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -44,6 +45,7 @@ export default function TasksPage() {
   const [filterPriority, setFilterPriority] = useState('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
   const [updatingTaskId, setUpdatingTaskId] = useState(null)
+  const [drawerTask, setDrawerTask] = useState(null)
 
   useEffect(() => {
     if (searchParams.get('new') === '1') {
@@ -120,6 +122,15 @@ export default function TasksPage() {
 
   const isNivaWorking = (task) => {
     return task.status === 'in-progress' && task.assigned_to?.toLowerCase() === 'niva'
+  }
+
+  function handleTaskClick(task) {
+    if (task.status === 'in-progress') {
+      setDrawerTask(task)
+    } else {
+      setEditingTask(task)
+      setShowModal(true)
+    }
   }
 
   const filteredTasks = tasks.filter(t => {
@@ -252,7 +263,7 @@ export default function TasksPage() {
                                   </div>
                                   <h4
                                     className="text-sm font-medium text-text mb-1 cursor-pointer hover:text-primary transition-colors"
-                                    onClick={() => { setEditingTask(task); setShowModal(true) }}
+                                    onClick={() => handleTaskClick(task)}
                                   >
                                     {task.title}
                                   </h4>
@@ -312,11 +323,11 @@ export default function TasksPage() {
                   <tr><td colSpan={6} className="text-center py-12 text-sm text-text-muted">No tasks found</td></tr>
                 ) : (
                   filteredTasks.map(task => (
-                    <tr key={task.id} className={`transition-colors ${
+                    <tr key={task.id} className={`transition-colors cursor-pointer ${
                       isNivaWorking(task)
                         ? 'bg-blue-50/50 hover:bg-blue-50'
                         : 'hover:bg-surface-hover'
-                    }`}>
+                    }`} onClick={() => handleTaskClick(task)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div>
@@ -390,6 +401,13 @@ export default function TasksPage() {
         onConfirm={handleDelete}
         title="Delete Task"
         message={`Are you sure you want to delete "${deleteTask?.title}"? This action cannot be undone.`}
+      />
+
+      {/* Task Activity Drawer (for in-progress tasks) */}
+      <TaskDrawer
+        task={drawerTask}
+        isOpen={!!drawerTask}
+        onClose={() => setDrawerTask(null)}
       />
     </div>
   )
