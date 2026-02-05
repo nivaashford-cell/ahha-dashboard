@@ -4,7 +4,7 @@ import {
   Brain, Zap, Target, AlertCircle, Sparkles,
   ArrowRight, Loader2, Bot, ChevronRight, Edit3,
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useRealtimeRow } from '@/hooks/useRealtime'
 import { formatDate, getDueDateLabel, getDueDateColor, priorityColors } from '@/lib/helpers'
 
 const typeConfig = {
@@ -81,84 +81,17 @@ function ThinkingDots() {
 }
 
 export default function TaskDrawer({ task, isOpen, onClose, onEdit }) {
-  const [activities, setActivities] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [usingSample, setUsingSample] = useState(false)
   const scrollRef = useRef(null)
   const isWorking = task?.status === 'in-progress' && task?.assigned_to?.toLowerCase() === 'niva'
 
-  // Fetch existing activity
-  useEffect(() => {
-    if (!task || !isOpen) return
-
-    async function fetchActivity() {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('task_activity')
-        .select('*')
-        .eq('task_id', task.id)
-        .order('created_at', { ascending: true })
-
-      if (error) {
-        // Table might not exist yet - use sample data
-        setUsingSample(true)
-        setActivities(getSampleActivity(task))
-      } else {
-        setUsingSample(false)
-        setActivities(data || [])
-      }
-      setLoading(false)
-    }
-
-    fetchActivity()
-  }, [task?.id, isOpen])
-
-  // Real-time subscription for new activity
-  useEffect(() => {
-    if (!task || !isOpen || usingSample) return
-
-    const channel = supabase
-      .channel(`task-activity-${task.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'task_activity',
-          filter: `task_id=eq.${task.id}`,
-        },
-        (payload) => {
-          setActivities(prev => [...prev, payload.new])
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [task?.id, isOpen, usingSample])
-
-  // Polling fallback for when realtime isn't enabled
-  useEffect(() => {
-    if (!task || !isOpen || usingSample || !isWorking) return
-
-    const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from('task_activity')
-        .select('*')
-        .eq('task_id', task.id)
-        .order('created_at', { ascending: true })
-
-      if (data && data.length > 0) {
-        setActivities(prev => {
-          if (data.length !== prev.length) return data
-          return prev
-        })
-      }
-    }, 5000) // Poll every 5 seconds for active tasks
-
-    return () => clearInterval(interval)
-  }, [task?.id, isOpen, usingSample, isWorking])
+  // Component-level realtime subscription for this task's activity
+  const { data: activities, loading } = useRealtimeRow('task_activity', {
+    filter: task ? { column: 'task_id', value: task.id } : null,
+    orderBy: 'created_at',
+    ascending: true,
+    pollInterval: isWorking ? 5000 : 30000, // faster polling when Niva is actively working
+    enabled: !!task && isOpen,
+  })
 
   // Auto-scroll to bottom on new activity
   useEffect(() => {
@@ -291,40 +224,7 @@ export default function TaskDrawer({ task, isOpen, onClose, onEdit }) {
           </div>
         </div>
 
-        {/* Footer */}
-        {usingSample && (
-          <div className="p-3 border-t border-border bg-amber-50 flex-shrink-0">
-            <p className="text-xs text-amber-700 text-center">
-              📋 Run the task_activity SQL migration in Supabase for live updates
-            </p>
-          </div>
-        )}
       </div>
     </>
   )
-}
-
-// Sample activity data when the table doesn't exist yet
-function getSampleActivity(task) {
-  const base = new Date(task.updated_at || task.created_at)
-  const isNiva = task.assigned_to?.toLowerCase() === 'niva'
-
-  if (task.status === 'done') {
-    return [
-      { id: 's1', task_id: task.id, type: 'thinking', message: 'Analyzing task requirements and breaking down into subtasks...', created_at: new Date(base.getTime() - 300000).toISOString() },
-      { id: 's2', task_id: task.id, type: 'progress', message: 'Started implementation. Setting up the necessary files and configurations.', created_at: new Date(base.getTime() - 240000).toISOString() },
-      { id: 's3', task_id: task.id, type: 'milestone', message: 'Core functionality implemented and tested.', created_at: new Date(base.getTime() - 120000).toISOString() },
-      { id: 's4', task_id: task.id, type: 'progress', message: 'Running final checks, building, and deploying...', created_at: new Date(base.getTime() - 60000).toISOString() },
-      { id: 's5', task_id: task.id, type: 'complete', message: 'Task completed and deployed successfully. Report sent to Richard.', created_at: base.toISOString() },
-    ]
-  }
-
-  if (task.status === 'in-progress' && isNiva) {
-    return [
-      { id: 's1', task_id: task.id, type: 'thinking', message: 'Reviewing task scope and identifying dependencies...', created_at: new Date(base.getTime() - 60000).toISOString() },
-      { id: 's2', task_id: task.id, type: 'progress', message: 'Working on implementation. Breaking this into manageable pieces.', created_at: new Date(base.getTime() - 30000).toISOString() },
-    ]
-  }
-
-  return []
 }

@@ -8,6 +8,7 @@ import {
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useRealtime } from '@/hooks/useRealtime'
 import { statusColors, priorityColors, formatDate, getDueDateLabel, getDueDateColor, truncate } from '@/lib/helpers'
 import Modal from '@/components/ui/Modal'
 import TaskForm from '@/components/tasks/TaskForm'
@@ -34,8 +35,11 @@ function WorkingIndicator() {
 export default function TasksPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
-  const [tasks, setTasks] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: tasks, loading, refetch: fetchTasks } = useRealtime('tasks', {
+    orderBy: 'created_at',
+    ascending: false,
+    pollInterval: 10000,
+  })
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
@@ -53,38 +57,6 @@ export default function TasksPage() {
       setSearchParams({})
     }
   }, [searchParams])
-
-  useEffect(() => {
-    fetchTasks()
-
-    // Real-time subscription for task changes
-    const channel = supabase
-      .channel('tasks-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => { fetchTasks() }
-      )
-      .subscribe()
-
-    // Polling fallback every 10s in case realtime isn't enabled
-    const poll = setInterval(fetchTasks, 10000)
-
-    return () => {
-      supabase.removeChannel(channel)
-      clearInterval(poll)
-    }
-  }, [])
-
-  async function fetchTasks() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (!error) setTasks(data || [])
-    setLoading(false)
-  }
 
   async function handleSubmit(form) {
     setSaving(true)
