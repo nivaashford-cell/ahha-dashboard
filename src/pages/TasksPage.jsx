@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import {
   Plus, Search, Filter, LayoutGrid, List,
   Calendar, Trash2, Edit3, GripVertical,
-  CheckCircle2, Circle, Clock,
+  CheckCircle2, Circle, Clock, Loader2, Bot,
 } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { statusColors, priorityColors, formatDate, getDueDateLabel, getDueDateColor, truncate } from '@/lib/helpers'
@@ -20,6 +21,15 @@ const columns = [
   { id: 'done', title: 'Done', icon: CheckCircle2, color: 'bg-green-500' },
 ]
 
+function WorkingIndicator() {
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-blue-50 border border-blue-200 animate-pulse">
+      <Bot className="w-3 h-3 text-blue-600 animate-spin" style={{ animationDuration: '3s' }} />
+      <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide">Niva working</span>
+    </div>
+  )
+}
+
 export default function TasksPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
@@ -33,6 +43,7 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterPriority, setFilterPriority] = useState('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
+  const [updatingTaskId, setUpdatingTaskId] = useState(null)
 
   useEffect(() => {
     if (searchParams.get('new') === '1') {
@@ -87,11 +98,28 @@ export default function TasksPage() {
   }
 
   async function handleStatusChange(taskId, newStatus) {
+    setUpdatingTaskId(taskId)
     await supabase
       .from('tasks')
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', taskId)
-    fetchTasks()
+    await fetchTasks()
+    setUpdatingTaskId(null)
+  }
+
+  function onDragEnd(result) {
+    const { destination, source, draggableId } = result
+    if (!destination) return
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return
+    const newStatus = destination.droppableId
+    // Optimistically update the task in state
+    setTasks(prev => prev.map(t => t.id === draggableId ? { ...t, status: newStatus } : t))
+    // Persist to database
+    handleStatusChange(draggableId, newStatus)
+  }
+
+  const isNivaWorking = (task) => {
+    return task.status === 'in-progress' && task.assigned_to?.toLowerCase() === 'niva'
   }
 
   const filteredTasks = tasks.filter(t => {
@@ -154,57 +182,116 @@ export default function TasksPage() {
 
       {/* Kanban View */}
       {view === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {columns.map(col => {
-            const colTasks = filteredTasks.filter(t => t.status === col.id)
-            return (
-              <div key={col.id} className="rounded-xl bg-slate-100/80 p-3">
-                <div className="flex items-center gap-2 mb-3 px-1">
-                  <div className={`w-2.5 h-2.5 rounded-full ${col.color}`} />
-                  <h3 className="text-sm font-semibold text-text">{col.title}</h3>
-                  <span className="text-xs text-text-muted bg-white rounded-full px-2 py-0.5">{colTasks.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {colTasks.map(task => (
-                    <div key={task.id} className="card p-3.5 hover:shadow-md transition-all cursor-pointer group"
-                      onClick={() => { setEditingTask(task); setShowModal(true) }}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {columns.map(col => {
+              const colTasks = filteredTasks.filter(t => t.status === col.id)
+              return (
+                <Droppable droppableId={col.id} key={col.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`rounded-xl p-3 min-h-[200px] transition-colors duration-200 ${
+                        snapshot.isDraggingOver
+                          ? 'bg-primary/5 ring-2 ring-primary/20 ring-dashed'
+                          : 'bg-slate-100/80'
+                      }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <span className={`badge ${priorityColors[task.priority] || 'badge-neutral'}`}>
-                          {task.priority}
-                        </span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteTask(task) }}
-                          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-text-muted hover:text-danger" />
-                        </button>
+                      <div className="flex items-center gap-2 mb-3 px-1">
+                        <div className={`w-2.5 h-2.5 rounded-full ${col.color}`} />
+                        <h3 className="text-sm font-semibold text-text">{col.title}</h3>
+                        <span className="text-xs text-text-muted bg-white rounded-full px-2 py-0.5">{colTasks.length}</span>
                       </div>
-                      <h4 className="text-sm font-medium text-text mb-1">{task.title}</h4>
-                      {task.description && (
-                        <p className="text-xs text-text-muted mb-2">{truncate(task.description, 80)}</p>
-                      )}
-                      <div className="flex items-center justify-between text-xs">
-                        {task.due_date && (
-                          <span className={`flex items-center gap-1 ${getDueDateColor(task.due_date)}`}>
-                            <Calendar className="w-3 h-3" />
-                            {getDueDateLabel(task.due_date)}
-                          </span>
+                      <div className="space-y-2">
+                        {colTasks.map((task, index) => (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`card p-3.5 transition-all group relative ${
+                                  snapshot.isDragging
+                                    ? 'shadow-lg ring-2 ring-primary/30 rotate-[2deg] scale-[1.02]'
+                                    : 'hover:shadow-md'
+                                } ${
+                                  isNivaWorking(task)
+                                    ? 'ring-2 ring-blue-400/50 bg-gradient-to-br from-white to-blue-50/50'
+                                    : ''
+                                } ${
+                                  updatingTaskId === task.id ? 'opacity-60' : ''
+                                }`}
+                              >
+                                {/* Drag handle */}
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="absolute left-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                                >
+                                  <GripVertical className="w-3.5 h-3.5 text-text-muted" />
+                                </div>
+
+                                <div className="pl-3">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className={`badge ${priorityColors[task.priority] || 'badge-neutral'}`}>
+                                        {task.priority}
+                                      </span>
+                                      {isNivaWorking(task) && <WorkingIndicator />}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {updatingTaskId === task.id && (
+                                        <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                                      )}
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setDeleteTask(task) }}
+                                        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-all"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 text-text-muted hover:text-danger" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <h4
+                                    className="text-sm font-medium text-text mb-1 cursor-pointer hover:text-primary transition-colors"
+                                    onClick={() => { setEditingTask(task); setShowModal(true) }}
+                                  >
+                                    {task.title}
+                                  </h4>
+                                  {task.description && (
+                                    <p className="text-xs text-text-muted mb-2">{truncate(task.description, 80)}</p>
+                                  )}
+                                  <div className="flex items-center justify-between text-xs">
+                                    {task.due_date && (
+                                      <span className={`flex items-center gap-1 ${getDueDateColor(task.due_date)}`}>
+                                        <Calendar className="w-3 h-3" />
+                                        {getDueDateLabel(task.due_date)}
+                                      </span>
+                                    )}
+                                    {task.assigned_to && (
+                                      <span className={`${isNivaWorking(task) ? 'text-blue-600 font-medium' : 'text-text-muted'}`}>
+                                        {task.assigned_to}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {colTasks.length === 0 && !snapshot.isDraggingOver && (
+                          <div className="text-center py-8 text-xs text-text-muted">No tasks</div>
                         )}
-                        {task.assigned_to && (
-                          <span className="text-text-muted">{task.assigned_to}</span>
+                        {colTasks.length === 0 && snapshot.isDraggingOver && (
+                          <div className="text-center py-8 text-xs text-primary font-medium">Drop here</div>
                         )}
                       </div>
                     </div>
-                  ))}
-                  {colTasks.length === 0 && (
-                    <div className="text-center py-8 text-xs text-text-muted">No tasks</div>
                   )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                </Droppable>
+              )
+            })}
+          </div>
+        </DragDropContext>
       ) : (
         /* List View */
         <div className="card overflow-hidden">
@@ -225,10 +312,19 @@ export default function TasksPage() {
                   <tr><td colSpan={6} className="text-center py-12 text-sm text-text-muted">No tasks found</td></tr>
                 ) : (
                   filteredTasks.map(task => (
-                    <tr key={task.id} className="hover:bg-surface-hover transition-colors">
+                    <tr key={task.id} className={`transition-colors ${
+                      isNivaWorking(task)
+                        ? 'bg-blue-50/50 hover:bg-blue-50'
+                        : 'hover:bg-surface-hover'
+                    }`}>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-text">{task.title}</p>
-                        {task.description && <p className="text-xs text-text-muted mt-0.5">{truncate(task.description, 60)}</p>}
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-text">{task.title}</p>
+                            {task.description && <p className="text-xs text-text-muted mt-0.5">{truncate(task.description, 60)}</p>}
+                          </div>
+                          {isNivaWorking(task) && <WorkingIndicator />}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <select
@@ -247,9 +343,14 @@ export default function TasksPage() {
                           {task.due_date ? formatDate(task.due_date) : '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{task.assigned_to || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">
+                        {task.assigned_to || '—'}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {updatingTaskId === task.id && (
+                            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          )}
                           <button onClick={() => { setEditingTask(task); setShowModal(true) }} className="p-1.5 rounded-lg hover:bg-surface-hover">
                             <Edit3 className="w-4 h-4 text-text-muted" />
                           </button>
