@@ -56,6 +56,24 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchTasks()
+
+    // Real-time subscription for task changes
+    const channel = supabase
+      .channel('tasks-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => { fetchTasks() }
+      )
+      .subscribe()
+
+    // Polling fallback every 10s in case realtime isn't enabled
+    const poll = setInterval(fetchTasks, 10000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(poll)
+    }
   }, [])
 
   async function fetchTasks() {
@@ -125,12 +143,7 @@ export default function TasksPage() {
   }
 
   function handleTaskClick(task) {
-    if (task.status === 'in-progress') {
-      setDrawerTask(task)
-    } else {
-      setEditingTask(task)
-      setShowModal(true)
-    }
+    setDrawerTask(task)
   }
 
   const filteredTasks = tasks.filter(t => {
@@ -408,6 +421,7 @@ export default function TasksPage() {
         task={drawerTask}
         isOpen={!!drawerTask}
         onClose={() => setDrawerTask(null)}
+        onEdit={(task) => { setEditingTask(task); setShowModal(true) }}
       />
     </div>
   )

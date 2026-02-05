@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   X, Calendar, User, Flag, Clock, CheckCircle2,
   Brain, Zap, Target, AlertCircle, Sparkles,
-  ArrowRight, Loader2, Bot, ChevronRight,
+  ArrowRight, Loader2, Bot, ChevronRight, Edit3,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { formatDate, getDueDateLabel, getDueDateColor, priorityColors } from '@/lib/helpers'
@@ -80,7 +80,7 @@ function ThinkingDots() {
   )
 }
 
-export default function TaskDrawer({ task, isOpen, onClose }) {
+export default function TaskDrawer({ task, isOpen, onClose, onEdit }) {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [usingSample, setUsingSample] = useState(false)
@@ -211,12 +211,23 @@ export default function TaskDrawer({ task, isOpen, onClose }) {
                 <p className="text-sm text-text-secondary mt-1">{task.description}</p>
               )}
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-surface-hover transition-colors flex-shrink-0"
-            >
-              <X className="w-5 h-5 text-text-muted" />
-            </button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {onEdit && (
+                <button
+                  onClick={() => { onClose(); onEdit(task); }}
+                  className="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+                  title="Edit task"
+                >
+                  <Edit3 className="w-4 h-4 text-text-muted" />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-surface-hover transition-colors"
+              >
+                <X className="w-5 h-5 text-text-muted" />
+              </button>
+            </div>
           </div>
 
           {/* Task meta */}
