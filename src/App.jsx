@@ -8,6 +8,8 @@ import ContactsPage from '@/pages/ContactsPage'
 import ReportsPage from '@/pages/ReportsPage'
 import CollaborationsPage from '@/pages/CollaborationsPage'
 import SettingsPage from '@/pages/SettingsPage'
+import PayrollPage from '@/pages/PayrollPage'
+import AutomationsPage from '@/pages/AutomationsPage'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 function ProtectedRoute({ children }) {
@@ -34,6 +36,8 @@ function AppRoutes() {
         <Route path="/contacts" element={<ContactsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/collaborations" element={<CollaborationsPage />} />
+        <Route path="/payroll" element={<PayrollPage />} />
+        <Route path="/automations" element={<AutomationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,7 @@
-import { Menu, Bell, Search } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getInitials } from '@/lib/helpers'
+import NotificationBell from '@/components/ui/NotificationBell'
 
 export default function Header({ onMenuClick, title }) {
   const { user } = useAuth()
@@ -19,10 +20,7 @@ export default function Header({ onMenuClick, title }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="p-2 rounded-lg hover:bg-surface-hover transition-colors relative">
-            <Bell className="w-5 h-5 text-text-secondary" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full" />
-          </button>
+          <NotificationBell />
           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
             <span className="text-xs font-medium text-white">
               {getInitials(user?.user_metadata?.full_name || user?.email || 'U')}

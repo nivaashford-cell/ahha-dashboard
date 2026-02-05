@@ -7,7 +7,9 @@ const pageTitles = {
   '/': 'Dashboard',
   '/tasks': 'Tasks',
   '/contacts': 'Contacts',
-  '/reports': 'Reports & Automations',
+  '/payroll': 'Payroll Summary',
+  '/reports': 'Reports',
+  '/automations': 'Automations',
   '/collaborations': 'Collaborations',
   '/settings': 'Settings',
 }

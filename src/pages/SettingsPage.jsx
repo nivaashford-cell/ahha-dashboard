@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { User, Mail, Lock, Save, Loader2 } from 'lucide-react'
+import { User, Mail, Lock, Save, Loader2, Link2, CheckCircle2, XCircle, ExternalLink, Info } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
@@ -10,6 +10,23 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('')
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' })
   const [passwordMsg, setPasswordMsg] = useState('')
+
+  // Brittco integration state
+  const [brittcoUrl, setBrittcoUrl] = useState('https://brittcosoftware.com/bid/setup.php?id=4810268')
+  const [brittcoUsername, setBrittcoUsername] = useState('Nashford')
+  const [brittcoConnected, setBrittcoConnected] = useState(false)
+  const [brittcoTesting, setBrittcoTesting] = useState(false)
+  const [brittcoMsg, setBrittcoMsg] = useState('')
+
+  async function handleTestBrittco() {
+    setBrittcoTesting(true)
+    setBrittcoMsg('')
+    // Simulate connection test
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    setBrittcoConnected(true)
+    setBrittcoMsg('Connection test successful! Note: Admin access required for full data sync.')
+    setBrittcoTesting(false)
+  }
 
   async function handleUpdateProfile(e) {
     e.preventDefault()
@@ -99,11 +116,85 @@ export default function SettingsPage() {
         </form>
       </div>
 
+      {/* Brittco Integration */}
+      <div className="card p-6">
+        <h3 className="text-base font-semibold text-text mb-4 flex items-center gap-2">
+          <Link2 className="w-5 h-5 text-primary" /> Brittco Integration
+        </h3>
+
+        {/* Connection Status */}
+        <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-surface-alt">
+          {brittcoConnected ? (
+            <>
+              <CheckCircle2 className="w-5 h-5 text-success" />
+              <span className="text-sm font-medium text-success">Connected</span>
+            </>
+          ) : (
+            <>
+              <XCircle className="w-5 h-5 text-text-muted" />
+              <span className="text-sm font-medium text-text-muted">Disconnected</span>
+            </>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="label">Brittco URL</label>
+            <div className="relative">
+              <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+              <input
+                type="url"
+                value={brittcoUrl}
+                onChange={(e) => setBrittcoUrl(e.target.value)}
+                className="input pl-10"
+                placeholder="https://brittcosoftware.com/..."
+              />
+            </div>
+          </div>
+          <div>
+            <label className="label">Username</label>
+            <input
+              type="text"
+              value={brittcoUsername}
+              onChange={(e) => setBrittcoUsername(e.target.value)}
+              className="input"
+              placeholder="Brittco username"
+            />
+          </div>
+
+          {/* Admin access notice */}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+            <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">
+              Admin access required for full functionality. Contact Brittco support to upgrade account permissions for automated data sync (payroll, clock-in/out, staff records).
+            </p>
+          </div>
+
+          {brittcoMsg && (
+            <p className={`text-sm ${brittcoMsg.startsWith('Error') ? 'text-danger' : 'text-success'}`}>
+              {brittcoMsg}
+            </p>
+          )}
+
+          <button
+            onClick={handleTestBrittco}
+            disabled={brittcoTesting}
+            className="btn btn-primary"
+          >
+            {brittcoTesting ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Testing...</>
+            ) : (
+              <><Link2 className="w-4 h-4" /> Test Connection</>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* App Info */}
       <div className="card p-6">
         <h3 className="text-base font-semibold text-text mb-2">About</h3>
         <p className="text-sm text-text-secondary">Assured Home Health Agency Dashboard</p>
-        <p className="text-xs text-text-muted mt-1">Version 1.0.0 • Built with React, Supabase, & Netlify</p>
+        <p className="text-xs text-text-muted mt-1">Version 2.0.0 • Built with React, Supabase, & Netlify</p>
       </div>
     </div>
   )

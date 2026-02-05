@@ -9,6 +9,8 @@ import {
   LogOut,
   Heart,
   X,
+  DollarSign,
+  Zap,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -16,7 +18,9 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/contacts', icon: Users, label: 'Contacts' },
+  { to: '/payroll', icon: DollarSign, label: 'Payroll' },
   { to: '/reports', icon: FileBarChart, label: 'Reports' },
+  { to: '/automations', icon: Zap, label: 'Automations' },
   { to: '/collaborations', icon: Handshake, label: 'Collaborations' },
 ]
 
