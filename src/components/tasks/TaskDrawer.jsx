@@ -138,6 +138,28 @@ export default function TaskDrawer({ task, isOpen, onClose }) {
     }
   }, [task?.id, isOpen, usingSample])
 
+  // Polling fallback for when realtime isn't enabled
+  useEffect(() => {
+    if (!task || !isOpen || usingSample || !isWorking) return
+
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('task_activity')
+        .select('*')
+        .eq('task_id', task.id)
+        .order('created_at', { ascending: true })
+
+      if (data && data.length > 0) {
+        setActivities(prev => {
+          if (data.length !== prev.length) return data
+          return prev
+        })
+      }
+    }, 5000) // Poll every 5 seconds for active tasks
+
+    return () => clearInterval(interval)
+  }, [task?.id, isOpen, usingSample, isWorking])
+
   // Auto-scroll to bottom on new activity
   useEffect(() => {
     if (scrollRef.current) {
